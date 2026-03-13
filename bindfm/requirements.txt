@@ -1,0 +1,45 @@
+# BindFM Requirements
+# ===================
+# Minimal install (CPU, testing):
+#   pip install torch --index-url https://download.pytorch.org/whl/cpu
+#   pip install numpy scipy biopython
+#
+# Full install (GPU, training):
+#   pip install -r requirements.txt
+#
+# Optional extras listed at the bottom.
+
+# ── Core ──────────────────────────────────────────────────────────────────────
+torch>=2.1.0
+numpy>=1.24.0
+scipy>=1.11.0
+
+# ── Molecular Parsing ─────────────────────────────────────────────────────────
+# RDKit: SMILES parsing, 3D conformer generation, Gasteiger charges
+# Falls back to simplified SMILES parser if absent.
+rdkit>=2023.09.1
+
+# Biopython: PDB parsing (preferred over manual parser)
+# Falls back to pure-Python PDB parser if absent.
+biopython>=1.81
+
+# ── Data & Training ───────────────────────────────────────────────────────────
+pandas>=2.0.0        # affinity CSV handling
+h5py>=3.9.0          # large dataset storage
+tqdm>=4.66.0         # progress bars
+pyyaml>=6.0          # config file parsing
+
+# ── Training Monitoring ───────────────────────────────────────────────────────
+tensorboard>=2.14.0
+wandb>=0.16.0        # optional: Weights & Biases experiment tracking
+
+# ── Benchmarking ──────────────────────────────────────────────────────────────
+scikit-learn>=1.3.0  # AUC, metrics
+matplotlib>=3.7.0    # result plotting
+
+# ── Optional: Performance ─────────────────────────────────────────────────────
+# Uncomment for A100/H100 GPU training (major speedup):
+# flash-attn>=2.4.0
+
+# Uncomment for faster molecular featurization:
+# numba>=0.58.0

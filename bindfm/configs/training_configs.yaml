@@ -1,0 +1,315 @@
+# BindFM Training Configurations
+# ================================
+# One config file per model size × training stage.
+# Loaded by training/train.py via --config flag.
+#
+# Usage:
+#   python3 training/train.py --config configs/small_stage0.yaml
+#   python3 training/train.py --config configs/full_stage3.yaml
+#
+# Config hierarchy:
+#   configs/
+#     small_stage0.yaml   — fast iteration / debugging
+#     small_stage1.yaml
+#     small_stage2.yaml
+#     small_stage3.yaml
+#     medium_stage0.yaml  — ablation / paper experiments
+#     medium_stage1.yaml
+#     medium_stage2.yaml
+#     medium_stage3.yaml
+#     full_stage0.yaml    — production training
+#     full_stage1.yaml
+#     full_stage2.yaml
+#     full_stage3.yaml
+
+# This file is the YAML template. Individual files below are generated
+# by configs/generate_configs.py or inline below.
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SHARED DEFAULTS (overridden per size/stage)
+# ──────────────────────────────────────────────────────────────────────────────
+
+defaults: &defaults
+  seed: 42
+  precision: "bf16"            # bf16 on A100, fp16 on V100
+  compile: false               # torch.compile — enable for PyTorch 2.0+
+  gradient_checkpointing: false
+
+  # Data
+  data_dir: "./data"
+  num_workers: 8
+  pin_memory: true
+
+  # Optimizer
+  optimizer: "adamw"
+  weight_decay: 1.0e-2
+  gradient_clip: 1.0
+  amsgrad: false
+
+  # LR schedule: cosine with linear warmup
+  scheduler: "cosine"
+  warmup_steps: 1000
+  min_lr_factor: 0.1           # LR decays to min_lr_factor * peak_lr
+
+  # Logging
+  log_every: 50
+  eval_every: 1000
+  save_every: 5000
+  wandb_project: "bindfm"
+  wandb_entity: null           # set to your wandb username
+
+  # Checkpointing
+  checkpoint_dir: "./checkpoints"
+  resume: null                 # path to checkpoint to resume from
+  keep_last_n: 3
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SMALL MODEL — Dev / Fast Experimentation
+# ──────────────────────────────────────────────────────────────────────────────
+
+small_model: &small_model
+  model_size: "small"
+  atom_feat_dim: 197
+  hidden_dim: 256
+  pair_dim: 128
+  n_encoder_layers: 8
+  n_trunk_layers: 8
+  n_heads: 8
+  dropout: 0.1
+  cutoff_angstrom: 8.0
+
+small_stage0:
+  <<: *defaults
+  <<: *small_model
+  stage: 0
+  description: "Small model, geometry pretraining"
+
+  # Training
+  max_steps: 50000
+  batch_size: 32
+  grad_accumulation: 1
+  peak_lr: 3.0e-4
+
+  # Data
+  max_atoms: 200
+  cache_geometry: "./data/cache/geometry_small.pkl"
+
+small_stage1:
+  <<: *defaults
+  <<: *small_model
+  stage: 1
+  description: "Small model, structure pretraining"
+
+  max_steps: 80000
+  batch_size: 8
+  grad_accumulation: 4
+  peak_lr: 1.0e-4
+
+  # Load from stage 0
+  init_from: "./checkpoints/small_stage0_final.pt"
+
+  # Data
+  max_atoms_a: 500
+  max_atoms_b: 200
+  min_resolution: 3.5
+
+  # Structure head
+  flow_n_steps: 50
+  flow_sigma_min: 0.01
+
+small_stage2:
+  <<: *defaults
+  <<: *small_model
+  stage: 2
+  description: "Small model, affinity training"
+
+  max_steps: 60000
+  batch_size: 16
+  grad_accumulation: 2
+  peak_lr: 5.0e-5
+
+  init_from: "./checkpoints/small_stage1_final.pt"
+  freeze_encoder_steps: 5000    # freeze encoder for first N steps
+
+  # Loss weights
+  affinity_weight: 1.0
+  binder_weight: 0.5
+  kinetics_weight: 0.1
+  uncertainty_weight: 0.1
+
+  # Data sources
+  sources: "bindingdb,aptabase,skempi,pdbbind"
+  decoy_ratio: 0.3
+
+small_stage3:
+  <<: *defaults
+  <<: *small_model
+  stage: 3
+  description: "Small model, joint fine-tuning"
+
+  max_steps: 40000
+  batch_size: 8
+  grad_accumulation: 4
+  peak_lr: 1.0e-5
+
+  init_from: "./checkpoints/small_stage2_final.pt"
+
+  # Task weights (normalized)
+  structure_weight: 0.3
+  affinity_weight:  0.6
+  generation_weight: 0.1
+
+  # Generative head
+  gen_n_steps: 100
+  gen_sigma_min: 0.01
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MEDIUM MODEL — Ablation / Paper Experiments
+# ──────────────────────────────────────────────────────────────────────────────
+
+medium_model: &medium_model
+  model_size: "medium"
+  atom_feat_dim: 197
+  hidden_dim: 512
+  pair_dim: 256
+  n_encoder_layers: 16
+  n_trunk_layers: 16
+  n_heads: 16
+  dropout: 0.1
+  cutoff_angstrom: 10.0
+
+medium_stage0:
+  <<: *defaults
+  <<: *medium_model
+  stage: 0
+  description: "Medium model, geometry pretraining"
+  max_steps: 100000
+  batch_size: 64
+  grad_accumulation: 1
+  peak_lr: 2.0e-4
+  max_atoms: 300
+  cache_geometry: "./data/cache/geometry_medium.pkl"
+
+medium_stage1:
+  <<: *defaults
+  <<: *medium_model
+  stage: 1
+  description: "Medium model, structure pretraining"
+  max_steps: 150000
+  batch_size: 16
+  grad_accumulation: 4
+  peak_lr: 8.0e-5
+  init_from: "./checkpoints/medium_stage0_final.pt"
+  max_atoms_a: 800
+  max_atoms_b: 300
+  min_resolution: 3.5
+  flow_n_steps: 100
+
+medium_stage2:
+  <<: *defaults
+  <<: *medium_model
+  stage: 2
+  description: "Medium model, affinity training"
+  max_steps: 100000
+  batch_size: 32
+  grad_accumulation: 2
+  peak_lr: 3.0e-5
+  init_from: "./checkpoints/medium_stage1_final.pt"
+  freeze_encoder_steps: 10000
+  sources: "bindingdb,chembl,aptabase,skempi,pdbbind,rnacompete"
+  decoy_ratio: 0.3
+
+medium_stage3:
+  <<: *defaults
+  <<: *medium_model
+  stage: 3
+  description: "Medium model, joint fine-tuning"
+  max_steps: 80000
+  batch_size: 16
+  grad_accumulation: 4
+  peak_lr: 5.0e-6
+  init_from: "./checkpoints/medium_stage2_final.pt"
+  structure_weight: 0.3
+  affinity_weight: 0.6
+  generation_weight: 0.1
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FULL MODEL — Production Training
+# ──────────────────────────────────────────────────────────────────────────────
+
+full_model: &full_model
+  model_size: "full"
+  atom_feat_dim: 197
+  hidden_dim: 1024
+  pair_dim: 512
+  n_encoder_layers: 24
+  n_trunk_layers: 32
+  n_heads: 16
+  dropout: 0.1
+  cutoff_angstrom: 12.0
+  flash_attention: true         # requires flash-attn package
+
+full_stage0:
+  <<: *defaults
+  <<: *full_model
+  stage: 0
+  description: "Full model, geometry pretraining (4×A100, 2 weeks)"
+  max_steps: 200000
+  batch_size: 128
+  grad_accumulation: 1
+  peak_lr: 1.5e-4
+  max_atoms: 500
+  cache_geometry: "./data/cache/geometry_full.pkl"
+  gradient_checkpointing: true
+
+full_stage1:
+  <<: *defaults
+  <<: *full_model
+  stage: 1
+  description: "Full model, structure pretraining (8×A100, 3 weeks)"
+  max_steps: 300000
+  batch_size: 32
+  grad_accumulation: 4
+  peak_lr: 5.0e-5
+  init_from: "./checkpoints/full_stage0_final.pt"
+  max_atoms_a: 2000
+  max_atoms_b: 500
+  min_resolution: 3.5
+  flow_n_steps: 200
+  gradient_checkpointing: true
+  warmup_steps: 5000
+
+full_stage2:
+  <<: *defaults
+  <<: *full_model
+  stage: 2
+  description: "Full model, affinity training (4×A100, 1 week)"
+  max_steps: 200000
+  batch_size: 64
+  grad_accumulation: 2
+  peak_lr: 2.0e-5
+  init_from: "./checkpoints/full_stage1_final.pt"
+  freeze_encoder_steps: 20000
+  sources: "bindingdb,chembl,aptabase,skempi,pdbbind,rnacompete,covalentdb"
+  decoy_ratio: 0.3
+  gradient_checkpointing: true
+  warmup_steps: 2000
+
+full_stage3:
+  <<: *defaults
+  <<: *full_model
+  stage: 3
+  description: "Full model, joint fine-tuning (8×A100, 2 weeks)"
+  max_steps: 150000
+  batch_size: 32
+  grad_accumulation: 4
+  peak_lr: 1.0e-5
+  init_from: "./checkpoints/full_stage2_final.pt"
+  structure_weight: 0.3
+  affinity_weight: 0.6
+  generation_weight: 0.1
+  gradient_checkpointing: true
+  warmup_steps: 1000

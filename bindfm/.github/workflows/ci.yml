@@ -1,0 +1,121 @@
+name: BindFM CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  syntax-check:
+    name: Syntax & Import Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy scipy biopython
+
+      - name: Syntax check — all Python files
+        run: |
+          python3 -c "
+          import ast
+          from pathlib import Path
+          files = list(Path('.').rglob('*.py'))
+          errors = 0
+          for f in files:
+              try:
+                  ast.parse(f.read_text())
+              except SyntaxError as e:
+                  print(f'SYNTAX ERROR {f}: {e}')
+                  errors += 1
+          print(f'Checked {len(files)} files, {errors} errors')
+          exit(errors)
+          "
+
+      - name: Import check — model package
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, '.')
+          from model.tokenizer import AtomFeatures, MolecularGraph, BindingPair, ATOM_FEAT_DIM
+          from model.encoder import DualEntityEncoder
+          from model.trunk import PairFormerTrunk
+          from model.heads import AffinityHead, BindFMLoss
+          from model.bindfm import BindFM, BindFMConfig
+          print('model imports OK')
+          "
+
+      - name: Import check — data + inference + benchmarks
+        run: |
+          python3 -c "
+          import sys
+          sys.path.insert(0, '.')
+          from data.parsers import SMILESParser, SequenceParser, PDBParser
+          from data.dataset import get_dataset, collate_binding_pairs
+          from inference.api import BindFMPredictor, AffinityResult
+          from benchmarks.evaluate import BindFMEvaluator
+          print('all imports OK')
+          "
+
+  quickstart-skip-training:
+    name: Quickstart (CPU, no training)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy scipy biopython
+
+      - name: Run quickstart (skip training)
+        run: python3 quickstart.py --device cpu --size small --skip-training
+        timeout-minutes: 10
+
+  quickstart-with-training:
+    name: Quickstart + Training Loop (CPU)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install numpy scipy biopython
+
+      - name: Run quickstart with training
+        run: python3 quickstart.py --device cpu --size small
+        timeout-minutes: 20

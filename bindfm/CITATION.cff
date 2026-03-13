@@ -1,0 +1,78 @@
+cff-version: 1.2.0
+message: "If you use BindFM in your research, please cite it as follows."
+type: software
+title: "BindFM: Universal Biomolecular Binding Foundation Model"
+abstract: >
+  BindFM is a from-scratch SE(3)-equivariant foundation model for universal
+  biomolecular binding prediction across five modalities: protein–small molecule,
+  protein–protein, protein–nucleic acid, nucleic–small molecule, and
+  nucleic–nucleic. Built with a shared atom-level EGNN encoder and PairFormer
+  trunk, co-trained on binding affinity, 3D complex structure, and de novo
+  binder generation. Special emphasis on therapeutic aptamers including LNA,
+  2'F, 2'OMe, and phosphorothioate modifications.
+authors:
+  - family-names: Abdullah
+    given-names: Hamza
+    affiliation: Terminal Bio
+    email: hamza@terminalbio.io
+repository-code: https://github.com/iamhamzaabdullah/BindFM
+url: https://github.com/iamhamzaabdullah/BindFM
+version: 1.0.0
+date-released: 2025-03-13
+license: MIT
+keywords:
+  - binding affinity prediction
+  - molecular biology
+  - foundation model
+  - aptamers
+  - drug discovery
+  - machine learning
+  - equivariant neural networks
+  - flow matching
+  - protein-ligand binding
+  - RNA aptamers
+references:
+  - type: article
+    authors:
+      - family-names: Satorras
+        given-names: Victor Garcia
+      - family-names: Hoogeboom
+        given-names: Emiel
+      - family-names: Welling
+        given-names: Max
+    title: "E(n) Equivariant Graph Neural Networks"
+    journal: Proceedings of Machine Learning Research
+    year: 2021
+    volume: 139
+    start: 9323
+    end: 9332
+    notes: "EGNN — the equivariant encoder architecture used in BindFM"
+  - type: article
+    authors:
+      - family-names: Jumper
+        given-names: John
+    title: "Highly accurate protein structure prediction with AlphaFold"
+    journal: Nature
+    year: 2021
+    volume: 596
+    start: 583
+    end: 589
+    notes: "PairFormer architecture inspiration (triangle updates, outer product mean)"
+  - type: article
+    authors:
+      - family-names: Lipman
+        given-names: Yaron
+      - family-names: Chen
+        given-names: Ricky T. Q.
+    title: "Flow Matching for Generative Modeling"
+    year: 2022
+    notes: "OT-CFM flow matching used in structure and generative heads"
+  - type: article
+    authors:
+      - family-names: Kendall
+        given-names: Alex
+      - family-names: Gal
+        given-names: Yarin
+    title: "Multi-Task Learning Using Uncertainty to Weigh Losses for Scene Geometry and Semantics"
+    year: 2018
+    notes: "Homoscedastic uncertainty weighting for multi-task loss"
