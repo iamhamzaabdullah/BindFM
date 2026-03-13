@@ -46,10 +46,14 @@ ELEMENTS = [
     "Cn", "Nh", "Fl", "Mc", "Lv", "Ts", "Og",
     # Biological pseudoatoms
     "Du",   # dummy / centroid
+    "Me",   # methyl group centroid (coarse-grained)
+    "Xx",   # generic unknown heavy atom
 ]
 
 ELEMENT_TO_IDX = {e: i for i, e in enumerate(ELEMENTS)}
-N_ELEMENTS = len(ELEMENTS)  # 124
+N_ELEMENTS = len(ELEMENTS)  # 124: 3 special + 118 standard + 3 pseudoatoms (Du, Me, Xx)
+
+assert N_ELEMENTS == 124, f"ELEMENTS list length changed to {N_ELEMENTS} — update ATOM_FEAT_DIM"
 
 
 # ──────────────────────────────────────────────
