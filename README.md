@@ -16,7 +16,7 @@
 *Built atom-by-atom. From scratch. Five modalities. One representation.*
 
 <br/>
-
+[![DOI](https://zenodo.org/badge/1179790668.svg)](https://doi.org/10.5281/zenodo.19343979)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![PyTorch 2.1+](https://img.shields.io/badge/PyTorch-2.1%2B-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22C55E?style=for-the-badge)](LICENSE)
